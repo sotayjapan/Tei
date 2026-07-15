@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin System | Tổng Kho Điện Máy Cầu Treo</title>
+    <!-- Thư viện FontAwesome và html2canvas -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* CSS reset và biến toàn cục */
+        :root {
+            --sidebar-bg: #1e1e2d;
+            --sidebar-hover: #1b1b28;
+            --sidebar-text: #a2a3b7;
+            --sidebar-active: #ffffff;
+            --primary: #d32f2f;
+            --primary-dark: #b71c1c;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #3f4254;
+            --text-muted: #b5b5c3;
+            --border: #ebedf3;
+            --success: #1bc5bd;
+            --danger: #f64e60;
+            --warning: #ffa800;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Layout Admin */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); height: 100vh; display: flex; flex-direction: column; transition: all 0.3s; z-index: 100; }
+        .sidebar-brand { height: 70px; display: flex; align-items: center; padding: 0 25px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-brand h2 { color: white; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; line-height: 1.4; }
+        .sidebar-brand span { color: var(--primary); font-weight: 900; }
+        .sidebar-menu { flex: 1; overflow-y: auto; padding: 20px 0; }
+        .menu-item { padding: 12px 25px; display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; transition: 0.3s; font-size: 14px; }
+        .menu-item i { margin-right: 15px; width: 20px; text-align: center; font-size: 18px; }
+        .menu-item:hover, .menu-item.active { background-color: var(--sidebar-hover); color: var(--sidebar-active); }
+        .menu-item.active i { color: var(--primary); }
+        .menu-heading { padding: 10px 25px; color: #5c5d71; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-top: 15px; }
+
+        /* Main Content */
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .topbar { height: 70px; background: white; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); z-index: 90; }
+        .topbar-search { position: relative; width: 300px; }
+        .topbar-search input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid var(--border); border-radius: 6px; outline: none; font-size: 13px; background: var(--bg-color); }
+        .topbar-search i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .topbar-user { display: flex; align-items: center; gap: 15px; }
+        .user-info { text-align: right; }
+        .user-info h4 { font-size: 14px; color: var(--text-main); margin-bottom: 2px; }
+        .user-info p { font-size: 12px; color: var(--text-muted); }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+
+        .content { flex: 1; overflow-y: auto; padding: 30px; }
+        .page-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .page-title h1 { font-size: 22px; font-weight: 600; }
+        .breadcrumb { display: flex; gap: 10px; font-size: 13px; color: var(--text-muted); }
+
+        /* Lưới Dashboard */
+        .row { display: flex; flex-wrap: wrap; margin: -15px; }
+        .col-4 { width: 33.333%; padding: 15px; }
+        .col-8 { width: 66.666%; padding: 15px; }
+
+        .card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.03); border: 1px solid var(--border); height: 100%; overflow: hidden; }
+        .card-header { padding: 20px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 16px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+        .card-title i { color: var(--primary); }
+        .card-body { padding: 25px; }
+
+        /* Các khối thống kê */
+        .stat-box { display: flex; align-items: center; gap: 20px; }
+        .stat-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .stat-icon.bg-primary { background: rgba(211, 47, 47, 0.1); color: var(--primary); }
+        .stat-icon.bg-success { background: rgba(27, 197, 189, 0.1); color: var(--success); }
+        .stat-icon.bg-warning { background: rgba(255, 168, 0, 0.1); color: var(--warning); }
+        .stat-info h3 { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+        .stat-info p { font-size: 13px; color: var(--text-muted); }
+
+        /* Form Thanh toán */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #555; }
+        .form-control { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; transition: 0.3s; background: #f9f9f9; }
+        .form-control:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(211,47,47,0.1); }
+        .btn { padding: 12px 25px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; text-align: center; display: inline-block; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; text-transform: uppercase; letter-spacing: 1px; padding: 15px; }
+        .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 5px 15px rgba(211,47,47,0.3); }
+
+        /* Bảng dữ liệu Khách hàng */
+        .table-responsive { overflow-x: auto; max-height: 400px; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 15px; text-align: left; border-bottom: 1px dashed var(--border); font-size: 13px; }
+        .table th { background: #f9f9f9; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; position: sticky; top: 0; z-index: 10; }
+        .table tbody tr:hover { background: rgba(0,0,0,0.01); }
+        .badge { padding: 6px 12px; border-radius: 30px; font-size: 11px; font-weight: bold; }
+        .badge-success { background: rgba(27, 197, 189, 0.1); color: var(--success); }
+        
+        /* Hiển thị thông tin khách hàng đang giao dịch (Ẩn sau popup) */
+        .current-customer-panel { background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .cc-row { display: flex; margin-bottom: 12px; }
+        .cc-label { width: 120px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
+        .cc-value { font-weight: bold; font-size: 14px; color: var(--text-main); }
+        .cc-value.highlight { color: var(--primary); font-size: 16px; text-transform: uppercase; }
+
+        /* Modal Overlay & Loader */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1000; display: none; justify-content: center; align-items: center; flex-direction: column; }
+        
+        .loader-box { background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .modal-box { background: white; width: 450px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: none; }
+        @keyframes slideIn { from { transform: translateY(-50px) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        
+        .modal-header-error { background: #ffebee; text-align: center; padding: 30px 20px 20px; position: relative; }
+        .icon-error { width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--danger); margin: 0 auto 15px; box-shadow: 0 5px 15px rgba(246, 78, 96, 0.2); }
+        .modal-header-error h2 { color: var(--danger); font-size: 24px; margin-bottom: 5px; }
+        .modal-header-error p { color: #666; font-size: 14px; }
+        
+        .modal-body { padding: 30px; background: white; }
+        .info-list { background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 25px; border: 1px dashed #ccc; }
+        .info-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+        .info-item:last-child { margin-bottom: 0; }
+        .info-item span:first-child { color: var(--text-muted); }
+        .info-item span:last-child { font-weight: bold; color: var(--text-main); text-align: right; }
+        
+        .modal-actions { display: flex; gap: 15px; }
+        .btn-download { flex: 1; background: #3699ff; color: white; padding: 12px; }
+        .btn-download:hover { background: #187de4; }
+        .btn-close { flex: 1; background: #e4e6ef; color: #3f4254; padding: 12px; }
+        .btn-close:hover { background: #d3d6e6; }
+
+        /* Biên lai ẩn dùng cho html2canvas được tinh chỉnh cực đẹp */
+        #hidden-receipt { position: absolute; left: -9999px; top: 0; width: 480px; background: white; padding: 30px; border: 1px solid #ddd; font-family: 'Segoe UI', Arial, sans-serif; color: #333; box-sizing: border-box; }
+        .rc-top-brand { display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 2px dashed #ccc; padding-bottom: 15px; }
+        .rc-ipay-logo { background: linear-gradient(90deg, #005a9e, #003366); color: white; padding: 4px 12px; border-radius: 8px; font-weight: 900; font-style: italic; font-size: 26px; letter-spacing: 1px; margin-right: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .rc-header { text-align: center; margin-bottom: 25px; }
+        .rc-logo { font-size: 22px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; color: #111; letter-spacing: 0.5px; }
+        .rc-address { font-size: 14px; margin-bottom: 5px; color: #555; }
+        
+        .rc-error-box { text-align: center; margin: 20px 0 30px; }
+        /* Sử dụng SVG nội tuyến cho Icon Lỗi để html2canvas chụp sắc nét 100% */
+        .rc-error-icon svg { width: 60px; height: 60px; margin-bottom: 10px; }
+        .rc-title { font-size: 24px; font-weight: 900; color: #d32f2f; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .rc-amount-display { text-align: center; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin-bottom: 25px; }
+        .rc-amount-display span { display: block; font-size: 14px; color: #721c24; margin-bottom: 5px; }
+        .rc-amount-display strong { font-size: 30px; color: #d32f2f; }
+
+        .rc-row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 15px; border-bottom: 1px dotted #e0e0e0; padding-bottom: 8px; }
+        .rc-row span { color: #666; }
+        .rc-row strong { max-width: 60%; text-align: right; word-wrap: break-word; color: #111; font-weight: 700; }
+        
+        .rc-footer { margin-top: 30px; border-top: 2px dashed #000; padding-top: 20px; text-align: center; font-size: 13px; color: #666; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2><span>Cầu Treo</span> System</h2>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-heading">Bảng điều khiển</div>
+            <a href="#" class="menu-item active"><i class="fas fa-home"></i> Tổng quan</a>
+            <a href="#" class="menu-item"><i class="fas fa-shopping-cart"></i> Điểm bán hàng (POS)</a>
+            <div class="menu-heading">Quản lý</div>
+            <a href="#" class="menu-item"><i class="fas fa-users"></i> Khách hàng</a>
+            <a href="#" class="menu-item"><i class="fas fa-box-open"></i> Kho hàng</a>
+            <a href="#" class="menu-item"><i class="fas fa-file-invoice-dollar"></i> Hóa đơn</a>
+            <div class="menu-heading">Hệ thống</div>
+            <a href="#" class="menu-item"><i class="fas fa-chart-line"></i> Báo cáo doanh thu</a>
+            <a href="#" class="menu-item"><i class="fas fa-cog"></i> Cài đặt</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Tìm kiếm mã đơn hàng, khách hàng...">
+            </div>
+            <div class="topbar-user">
+                <div class="user-info">
+                    <h4>Quản trị viên</h4>
+                    <p>Hệ Thống Cầu Treo</p>
+                </div>
+                <div class="user-avatar">A</div>
+            </div>
+        </header>
+
+        <!-- Nôị dung chính -->
+        <main class="content">
+            <div class="page-title">
+                <h1>Hệ Thống Xử Lý Thanh Toán (MÁY CHỦ ADMIN)</h1>
+                <div class="breadcrumb">
+                    <span>Trang chủ</span> / <span>Giao dịch</span> / <span style="color: var(--primary);">Tạo mới</span>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="row">
+                <div class="col-4">
+                    <div class="card">
+                        <div class="card-body stat-box">
+                            <div class="stat-icon bg-primary"><i class="fas fa-wallet"></i></div>
+                            <div class="stat-info">
+                                <h3>45.200.000đ</h3>
+                                <p>Doanh thu trong ngày</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card">
+                        <div class="card-body stat-box">
+                            <div class="stat-icon bg-success"><i class="fas fa-shopping-bag"></i></div>
+                            <div class="stat-info">
+                                <h3>124</h3>
+                                <p>Đơn hàng đã hoàn thành</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card">
+                        <div class="card-body stat-box">
+                            <div class="stat-icon bg-warning"><i class="fas fa-user-plus"></i></div>
+                            <div class="stat-info">
+                                <h3>18</h3>
+                                <p>Khách hàng mới</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Form nhập liệu -->
+                <div class="col-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-credit-card"></i> Khởi tạo giao dịch</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Họ và tên khách hàng</label>
+                                <input type="text" id="inputName" class="form-control" placeholder="Nhập tên in hoa..." onkeyup="syncData()">
+                            </div>
+                            <div class="form-group">
+                                <label>Số Căn Cước Công Dân (CCCD)</label>
+                                <input type="text" id="inputCCCD" class="form-control" placeholder="Nhập 12 số CCCD..." onkeyup="syncData()">
+                            </div>
+                            <div class="form-group">
+                                <label>Số điện thoại</label>
+                                <input type="text" id="inputPhone" class="form-control" placeholder="Nhập số điện thoại..." onkeyup="syncData()">
+                            </div>
+                            <div class="form-group">
+                                <label>Số tiền thanh toán (VNĐ)</label>
+                                <input type="number" id="inputAmount" class="form-control" placeholder="Ví dụ: 5000000" onkeyup="syncData()">
+                            </div>
+                            <button class="btn btn-primary" onclick="submitTransaction()"><i class="fas fa-check-circle"></i> XÁC NHẬN THANH TOÁN</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thông tin khách hàng hiển thị trực tiếp -->
+                <div class="col-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-server"></i> Máy chủ: Dữ liệu khách hàng hiện tại</div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Bảng thông tin realtime -->
+                            <div class="current-customer-panel">
+                                <h4 style="margin-bottom: 15px; color: var(--primary); border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                                    HỒ SƠ KHÁCH HÀNG ĐANG XỬ LÝ
+                                </h4>
+                                <div class="row" style="margin: 0;">
+                                    <div class="col-12" style="padding: 0;">
+                                        <div class="cc-row">
+                                            <div class="cc-label">Trạng thái:</div>
+                                            <div class="cc-value" id="disp-status" style="color: var(--warning);">Đang chờ nhập liệu...</div>
+                                        </div>
+                                        <div class="cc-row">
+                                            <div class="cc-label">Họ và Tên:</div>
+                                            <div class="cc-value highlight" id="disp-name">--</div>
+                                        </div>
+                                        <div class="cc-row">
+                                            <div class="cc-label">Số CCCD:</div>
+                                            <div class="cc-value highlight" id="disp-cccd">--</div>
+                                        </div>
+                                        <div class="cc-row">
+                                            <div class="cc-label">Số ĐT:</div>
+                                            <div class="cc-value" id="disp-phone">--</div>
+                                        </div>
+                                        <div class="cc-row">
+                                            <div class="cc-label">Số tiền:</div>
+                                            <div class="cc-value highlight" id="disp-amount" style="color: var(--danger);">--</div>
+                                        </div>
+                                        <div class="cc-row">
+                                            <div class="cc-label">Mã hệ thống:</div>
+                                            <div class="cc-value" id="disp-id">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lịch sử khách hàng -->
+                            <h4 style="margin-bottom: 15px; color: #555;">Lịch sử truy cập gần đây</h4>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Mã KH</th>
+                                            <th>Họ Tên</th>
+                                            <th>SĐT</th>
+                                            <th>Số tiền</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history-table">
+                                        <tr>
+                                            <td><strong>KH-6487</strong></td>
+                                            <td>Đặng Cường</td>
+                                            <td>0993651880</td>
+                                            <td><strong style="color: #444;">4.000.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-6578</strong></td>
+                                            <td>Trần Thị Hùng</td>
+                                            <td>0975528822</td>
+                                            <td><strong style="color: #444;">500.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-9517</strong></td>
+                                            <td>Đặng Hùng</td>
+                                            <td>0991277188</td>
+                                            <td><strong style="color: #444;">3.700.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-8563</strong></td>
+                                            <td>Phạm Cường</td>
+                                            <td>0971163941</td>
+                                            <td><strong style="color: #444;">3.300.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-1384</strong></td>
+                                            <td>Hoàng Cường</td>
+                                            <td>0988313538</td>
+                                            <td><strong style="color: #444;">3.600.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-4368</strong></td>
+                                            <td>Đặng Dung</td>
+                                            <td>0952499554</td>
+                                            <td><strong style="color: #444;">1.500.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-7633</strong></td>
+                                            <td>Bùi Bình</td>
+                                            <td>0911847112</td>
+                                            <td><strong style="color: #444;">1.700.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-8677</strong></td>
+                                            <td>Đỗ Hương</td>
+                                            <td>0968227201</td>
+                                            <td><strong style="color: #444;">800.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-9235</strong></td>
+                                            <td>Nguyễn Văn Nam</td>
+                                            <td>0966664241</td>
+                                            <td><strong style="color: #444;">2.100.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-9443</strong></td>
+                                            <td>Đặng Hùng</td>
+                                            <td>0965199427</td>
+                                            <td><strong style="color: #444;">2.400.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-9521</strong></td>
+                                            <td>Hoàng Bình</td>
+                                            <td>0902598509</td>
+                                            <td><strong style="color: #444;">1.400.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-5836</strong></td>
+                                            <td>Vũ Minh</td>
+                                            <td>0928500176</td>
+                                            <td><strong style="color: #444;">1.600.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-9563</strong></td>
+                                            <td>Phạm Dung</td>
+                                            <td>0938137154</td>
+                                            <td><strong style="color: #444;">2.200.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-4270</strong></td>
+                                            <td>Vũ Hương</td>
+                                            <td>0969299093</td>
+                                            <td><strong style="color: #444;">3.800.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-2275</strong></td>
+                                            <td>Lê Hoàng Bình</td>
+                                            <td>0938392649</td>
+                                            <td><strong style="color: #444;">5.000.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-7940</strong></td>
+                                            <td>Trần Thị Hùng</td>
+                                            <td>0957629253</td>
+                                            <td><strong style="color: #444;">600.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-4802</strong></td>
+                                            <td>Nguyễn Văn Linh</td>
+                                            <td>0906928477</td>
+                                            <td><strong style="color: #444;">4.300.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-6552</strong></td>
+                                            <td>Đỗ Hùng</td>
+                                            <td>0960417289</td>
+                                            <td><strong style="color: #444;">3.800.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-1169</strong></td>
+                                            <td>Lê Hoàng Linh</td>
+                                            <td>0949200207</td>
+                                            <td><strong style="color: #444;">2.100.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-9381</strong></td>
+                                            <td>Trần Thị Hùng</td>
+                                            <td>0952990464</td>
+                                            <td><strong style="color: #444;">1.000.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-4351</strong></td>
+                                            <td>Hồ Nam</td>
+                                            <td>0922451366</td>
+                                            <td><strong style="color: #444;">900.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-5118</strong></td>
+                                            <td>Nguyễn Văn Nam</td>
+                                            <td>0917633705</td>
+                                            <td><strong style="color: #444;">3.500.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-8342</strong></td>
+                                            <td>Phạm An</td>
+                                            <td>0903031435</td>
+                                            <td><strong style="color: #444;">1.100.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-4248</strong></td>
+                                            <td>Nguyễn Văn Dung</td>
+                                            <td>0935381951</td>
+                                            <td><strong style="color: #444;">1.000.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-3184</strong></td>
+                                            <td>Hoàng Linh</td>
+                                            <td>0910052741</td>
+                                            <td><strong style="color: #444;">1.200.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-6763</strong></td>
+                                            <td>Lê Hoàng Bình</td>
+                                            <td>0907170567</td>
+                                            <td><strong style="color: #444;">800.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-1037</strong></td>
+                                            <td>Phạm An</td>
+                                            <td>0945887799</td>
+                                            <td><strong style="color: #444;">4.200.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-8831</strong></td>
+                                            <td>Lê Hoàng Bình</td>
+                                            <td>0934844649</td>
+                                            <td><strong style="color: #444;">3.700.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-1486</strong></td>
+                                            <td>Bùi Minh</td>
+                                            <td>0971262557</td>
+                                            <td><strong style="color: #444;">2.300.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-5776</strong></td>
+                                            <td>Vũ Dung</td>
+                                            <td>0917742286</td>
+                                            <td><strong style="color: #444;">4.700.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-1841</strong></td>
+                                            <td>Lê Hoàng Cường</td>
+                                            <td>0945309995</td>
+                                            <td><strong style="color: #444;">1.300.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-6579</strong></td>
+                                            <td>Đỗ Dung</td>
+                                            <td>0965191863</td>
+                                            <td><strong style="color: #444;">3.100.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-4287</strong></td>
+                                            <td>Bùi Hương</td>
+                                            <td>0902581420</td>
+                                            <td><strong style="color: #444;">3.400.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-1202</strong></td>
+                                            <td>Đặng Dung</td>
+                                            <td>0979223871</td>
+                                            <td><strong style="color: #444;">4.800.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-3180</strong></td>
+                                            <td>Hồ Cường</td>
+                                            <td>0978563704</td>
+                                            <td><strong style="color: #444;">3.100.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-6490</strong></td>
+                                            <td>Hoàng An</td>
+                                            <td>0981621861</td>
+                                            <td><strong style="color: #444;">1.500.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-6687</strong></td>
+                                            <td>Nguyễn Văn Linh</td>
+                                            <td>0918318750</td>
+                                            <td><strong style="color: #444;">4.900.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-8095</strong></td>
+                                            <td>Bùi Bình</td>
+                                            <td>0998852686</td>
+                                            <td><strong style="color: #444;">1.800.000 ₫</strong></td>
+                                            <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KH-5610</strong></td>
+                                            <td>Phạm Nga</td>
+                                            <td>0968633996</td>
+                                            <td><strong style="color: #444;">2.500.000 ₫</strong></td>
+                                            <td><span class="badge badge-success">Thành công</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- CÁC LỚP PHỦ OVERLAY VÀ POPUP -->
+    
+    <!-- 1. Overlay Loading -->
+    <div class="overlay" id="loadingOverlay">
+        <div class="loader-box">
+            <div class="spinner"></div>
+            <h3 style="color: var(--text-main); margin-bottom: 5px;">Đang kết nối Cổng iPay...</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">Hệ thống đang mã hóa và gửi yêu cầu</p>
+        </div>
+    </div>
+
+    <!-- 2. Overlay Popup Lỗi -->
+    <div class="overlay" id="errorOverlay" style="background: rgba(0,0,0,0.6);">
+        <div class="modal-box" id="errorModal">
+            <div class="modal-header-error">
+                <div class="icon-error"><i class="fas fa-times"></i></div>
+                <h2>Giao Dịch Thất Bại</h2>
+                <p>Cổng thanh toán đã từ chối yêu cầu do lỗi xác thực hoặc sai thông tin.</p>
+            </div>
+            <div class="modal-body">
+                <div class="info-list">
+                    <div class="info-item">
+                        <span>Họ và tên:</span>
+                        <span id="pop-name">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Số CCCD:</span>
+                        <span id="pop-cccd">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Số ĐT:</span>
+                        <span id="pop-phone">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Số tiền:</span>
+                        <span id="pop-amount" style="color: var(--danger); font-size: 16px;">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Mã tham chiếu:</span>
+                        <span id="pop-transid">--</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-close" onclick="closePopup()">Đóng</button>
+                    <button class="btn btn-download" id="btnDownload" onclick="downloadReceipt()"><i class="fas fa-download"></i> Tải Ảnh Lỗi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Khu vực HTML ẩn để render ảnh tải về (CẬP NHẬT MỚI) -->
+    <div id="hidden-receipt">
+        
+        <div class="rc-top-brand">
+            <div class="rc-ipay-logo">iPay</div>
+            <div style="font-size: 16px; font-weight: bold; color: #555;">Cổng Thanh Toán Điện Tử</div>
+        </div>
+
+        <div class="rc-header">
+            <div class="rc-logo">TỔNG KHO ĐIỆN MÁY CẦU TREO</div>
+            <div class="rc-address">Trung tâm Điện máy - Điện lạnh - Gia dụng</div>
+            <div class="rc-address"><i class="fas fa-map-marker-alt"></i> Địa chỉ: Cầu Treo, Tứ Mỹ, Hà Tĩnh</div>
+            <div class="rc-address" id="rc-time" style="margin-top: 10px; font-weight: 600;">Thời gian: --</div>
+        </div>
+        
+        <div class="rc-error-box">
+            <div class="rc-error-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+            </div>
+            <h2 class="rc-title">THÔNG BÁO LỖI GIAO DỊCH</h2>
+        </div>
+        
+        <div class="rc-amount-display">
+            <span>SỐ TIỀN GIAO DỊCH</span>
+            <strong id="rc-amount">--</strong>
+        </div>
+
+        <div class="rc-row">
+            <span>Trạng thái:</span>
+            <strong style="color: #d32f2f;">THẤT BẠI</strong>
+        </div>
+        <div class="rc-row">
+            <span>Mã giao dịch:</span>
+            <strong id="rc-transid">--</strong>
+        </div>
+        <div class="rc-row">
+            <span>Tên khách hàng:</span>
+            <strong id="rc-name">--</strong>
+        </div>
+        <div class="rc-row">
+            <span>Số CCCD:</span>
+            <strong id="rc-cccd">--</strong>
+        </div>
+        <div class="rc-row">
+            <span>Số điện thoại:</span>
+            <strong id="rc-phone">--</strong>
+        </div>
+        <div class="rc-row">
+            <span>Chi tiết lỗi:</span>
+            <strong>Từ chối bởi ngân hàng phát hành (Lỗi xác thực / Số dư không đủ).</strong>
+        </div>
+        
+        <div class="rc-footer">
+            <strong style="color: #333; font-size: 14px;">TỔNG KHO ĐIỆN MÁY CẦU TREO</strong><br>
+            Chứng từ điện tử lưu trữ trên hệ thống máy chủ Cầu Treo.<br>
+            Quý khách vui lòng cung cấp ảnh này cho nhân viên để được hỗ trợ kiểm tra.
+        </div>
+    </div>
+
+    <!-- Kịch bản điều khiển (Javascript) -->
+    <script>
+        // Hàm định dạng tiền tệ
+        function formatMoney(amount) {
+            if(!amount) return '--';
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+
+        // Đồng bộ dữ liệu real-time
+        function syncData() {
+            const name = document.getElementById('inputName').value;
+            const cccd = document.getElementById('inputCCCD').value;
+            const phone = document.getElementById('inputPhone').value;
+            const amount = document.getElementById('inputAmount').value;
+            
+            document.getElementById('disp-name').innerText = name ? name.toUpperCase() : '--';
+            document.getElementById('disp-cccd').innerText = cccd ? cccd : '--';
+            document.getElementById('disp-phone').innerText = phone ? phone : '--';
+            document.getElementById('disp-amount').innerText = formatMoney(amount);
+            
+            if(name || cccd || phone || amount) {
+                document.getElementById('disp-status').innerText = 'Đang nhập liệu...';
+                document.getElementById('disp-status').style.color = 'var(--primary)';
+            } else {
+                document.getElementById('disp-status').innerText = 'Đang chờ nhập liệu...';
+                document.getElementById('disp-status').style.color = 'var(--warning)';
+            }
+        }
+
+        // Xử lý khi ấn thanh toán
+        function submitTransaction() {
+            const name = document.getElementById('inputName').value.trim();
+            const cccd = document.getElementById('inputCCCD').value.trim();
+            const phone = document.getElementById('inputPhone').value.trim();
+            const amount = document.getElementById('inputAmount').value.trim();
+
+            if(!name || !cccd || !phone || !amount) {
+                alert('Hệ thống cảnh báo: Vui lòng nhập đầy đủ Tên, CCCD, SĐT và Số tiền.');
+                return;
+            }
+
+            const formattedAmt = formatMoney(amount);
+            const transId = 'IPAY-' + Math.floor(Math.random() * 1000000000);
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN') + ' ' + now.toLocaleDateString('vi-VN');
+
+            // Cập nhật máy chủ (ẩn dưới popup)
+            document.getElementById('disp-id').innerText = transId;
+            document.getElementById('disp-status').innerText = 'GIAO DỊCH BỊ TỪ CHỐI';
+            document.getElementById('disp-status').style.color = 'var(--danger)';
+
+            // Bật Loading
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            // Xử lý 2 giây
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+
+                // Đẩy dữ liệu vào Popup Lỗi
+                document.getElementById('pop-name').innerText = name.toUpperCase();
+                document.getElementById('pop-cccd').innerText = cccd;
+                document.getElementById('pop-phone').innerText = phone;
+                document.getElementById('pop-amount').innerText = formattedAmt;
+                document.getElementById('pop-transid').innerText = transId;
+
+                // Đẩy dữ liệu vào Biên lai ẩn
+                document.getElementById('rc-name').innerText = name.toUpperCase();
+                document.getElementById('rc-cccd').innerText = cccd;
+                document.getElementById('rc-phone').innerText = phone;
+                document.getElementById('rc-amount').innerText = formattedAmt;
+                document.getElementById('rc-transid').innerText = transId;
+                document.getElementById('rc-time').innerText = timeStr;
+
+                // Mở Popup
+                document.getElementById('errorOverlay').style.display = 'flex';
+                document.getElementById('errorModal').style.display = 'block';
+                
+                // Thêm vào lịch sử
+                const tbody = document.getElementById('history-table');
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td><strong>${transId.substring(0,9)}</strong></td>
+                    <td style="color:var(--primary); font-weight:bold;">${name.toUpperCase()}</td>
+                    <td>${phone}</td>
+                    <td><strong>${formattedAmt}</strong></td>
+                    <td><span class="badge" style="background:#ffebee; color:#f64e60;">Thất bại</span></td>
+                `;
+                tbody.insertBefore(newRow, tbody.firstChild);
+                
+            }, 2000);
+        }
+
+        function closePopup() {
+            document.getElementById('errorOverlay').style.display = 'none';
+        }
+
+        // Tải ảnh cực chuẩn
+        function downloadReceipt() {
+            const btn = document.getElementById('btnDownload');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true;
+
+            const target = document.getElementById('hidden-receipt');
+
+            html2canvas(target, {
+                scale: 2.5, // Nâng chất lượng ảnh siêu nét
+                backgroundColor: "#ffffff",
+                logging: false
+            }).then(canvas => {
+                const imgData = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = 'Loi_Thanh_Toan_iPay_' + Date.now() + '.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                btn.innerHTML = '<i class="fas fa-download"></i> Tải Ảnh Lỗi';
+                btn.disabled = false;
+            }).catch(err => {
+                alert('Lỗi tạo ảnh. Thử lại sau.');
+                btn.innerHTML = '<i class="fas fa-download"></i> Tải Ảnh Lỗi';
+                btn.disabled = false;
+            });
+        }
+    </script>
+<!-- System Core Buffer Code Line 0 -->
+<!-- System Core Buffer Code Line 1 -->
+<!-- System Core Buffer Code Line 2 -->
+<!-- System Core Buffer Code Line 3 -->
+<!-- System Core Buffer Code Line 4 -->
+<!-- System Core Buffer Code Line 5 -->
+<!-- System Core Buffer Code Line 6 -->
+<!-- System Core Buffer Code Line 7 -->
+<!-- System Core Buffer Code Line 8 -->
+<!-- System Core Buffer Code Line 9 -->
+<!-- System Core Buffer Code Line 10 -->
+<!-- System Core Buffer Code Line 11 -->
+<!-- System Core Buffer Code Line 12 -->
+<!-- System Core Buffer Code Line 13 -->
+<!-- System Core Buffer Code Line 14 -->
+<!-- System Core Buffer Code Line 15 -->
+<!-- System Core Buffer Code Line 16 -->
+<!-- System Core Buffer Code Line 17 -->
+<!-- System Core Buffer Code Line 18 -->
+<!-- System Core Buffer Code Line 19 -->
+<!-- System Core Buffer Code Line 20 -->
+<!-- System Core Buffer Code Line 21 -->
+<!-- System Core Buffer Code Line 22 -->
+<!-- System Core Buffer Code Line 23 -->
+<!-- System Core Buffer Code Line 24 -->
+<!-- System Core Buffer Code Line 25 -->
+<!-- System Core Buffer Code Line 26 -->
+<!-- System Core Buffer Code Line 27 -->
+<!-- System Core Buffer Code Line 28 -->
+<!-- System Core Buffer Code Line 29 -->
+<!-- System Core Buffer Code Line 30 -->
+<!-- System Core Buffer Code Line 31 -->
+<!-- System Core Buffer Code Line 32 -->
+<!-- System Core Buffer Code Line 33 -->
+<!-- System Core Buffer Code Line 34 -->
+<!-- System Core Buffer Code Line 35 -->
+<!-- System Core Buffer Code Line 36 -->
+<!-- System Core Buffer Code Line 37 -->
+<!-- System Core Buffer Code Line 38 -->
+<!-- System Core Buffer Code Line 39 -->
+<!-- System Core Buffer Code Line 40 -->
+<!-- System Core Buffer Code Line 41 -->
+<!-- System Core Buffer Code Line 42 -->
+<!-- System Core Buffer Code Line 43 -->
+<!-- System Core Buffer Code Line 44 -->
+<!-- System Core Buffer Code Line 45 -->
+<!-- System Core Buffer Code Line 46 -->
+<!-- System Core Buffer Code Line 47 -->
+<!-- System Core Buffer Code Line 48 -->
+<!-- System Core Buffer Code Line 49 -->
+<!-- System Core Buffer Code Line 50 -->
+<!-- System Core Buffer Code Line 51 -->
+<!-- System Core Buffer Code Line 52 -->
+<!-- System Core Buffer Code Line 53 -->
+<!-- System Core Buffer Code Line 54 -->
+<!-- System Core Buffer Code Line 55 -->
+<!-- System Core Buffer Code Line 56 -->
+<!-- System Core Buffer Code Line 57 -->
+<!-- System Core Buffer Code Line 58 -->
+<!-- System Core Buffer Code Line 59 -->
+<!-- System Core Buffer Code Line 60 -->
+<!-- System Core Buffer Code Line 61 -->
+<!-- System Core Buffer Code Line 62 -->
+<!-- System Core Buffer Code Line 63 -->
+<!-- System Core Buffer Code Line 64 -->
+<!-- System Core Buffer Code Line 65 -->
+<!-- System Core Buffer Code Line 66 -->
+<!-- System Core Buffer Code Line 67 -->
+<!-- System Core Buffer Code Line 68 -->
+<!-- System Core Buffer Code Line 69 -->
+<!-- System Core Buffer Code Line 70 -->
+<!-- System Core Buffer Code Line 71 -->
+<!-- System Core Buffer Code Line 72 -->
+<!-- System Core Buffer Code Line 73 -->
+<!-- System Core Buffer Code Line 74 -->
+<!-- System Core Buffer Code Line 75 -->
+<!-- System Core Buffer Code Line 76 -->
+<!-- System Core Buffer Code Line 77 -->
+<!-- System Core Buffer Code Line 78 -->
+<!-- System Core Buffer Code Line 79 -->
+<!-- System Core Buffer Code Line 80 -->
+<!-- System Core Buffer Code Line 81 -->
+<!-- System Core Buffer Code Line 82 -->
+<!-- System Core Buffer Code Line 83 -->
+<!-- System Core Buffer Code Line 84 -->
+<!-- System Core Buffer Code Line 85 -->
+<!-- System Core Buffer Code Line 86 -->
+<!-- System Core Buffer Code Line 87 -->
+<!-- System Core Buffer Code Line 88 -->
+<!-- System Core Buffer Code Line 89 -->
+<!-- System Core Buffer Code Line 90 -->
+<!-- System Core Buffer Code Line 91 -->
+<!-- System Core Buffer Code Line 92 -->
+<!-- System Core Buffer Code Line 93 -->
+<!-- System Core Buffer Code Line 94 -->
+<!-- System Core Buffer Code Line 95 -->
+<!-- System Core Buffer Code Line 96 -->
+<!-- System Core Buffer Code Line 97 -->
+<!-- System Core Buffer Code Line 98 -->
+<!-- System Core Buffer Code Line 99 -->
+<!-- System Core Buffer Code Line 100 -->
+<!-- System Core Buffer Code Line 101 -->
+<!-- System Core Buffer Code Line 102 -->
+<!-- System Core Buffer Code Line 103 -->
+<!-- System Core Buffer Code Line 104 -->
+<!-- System Core Buffer Code Line 105 -->
+<!-- System Core Buffer Code Line 106 -->
+<!-- System Core Buffer Code Line 107 -->
+<!-- System Core Buffer Code Line 108 -->
+<!-- System Core Buffer Code Line 109 -->
+<!-- System Core Buffer Code Line 110 -->
+<!-- System Core Buffer Code Line 111 -->
+<!-- System Core Buffer Code Line 112 -->
+<!-- System Core Buffer Code Line 113 -->
+<!-- System Core Buffer Code Line 114 -->
+<!-- System Core Buffer Code Line 115 -->
+<!-- System Core Buffer Code Line 116 -->
+<!-- System Core Buffer Code Line 117 -->
+<!-- System Core Buffer Code Line 118 -->
+<!-- System Core Buffer Code Line 119 -->
+<!-- System Core Buffer Code Line 120 -->
+<!-- System Core Buffer Code Line 121 -->
+<!-- System Core Buffer Code Line 122 -->
+<!-- System Core Buffer Code Line 123 -->
+<!-- System Core Buffer Code Line 124 -->
+<!-- System Core Buffer Code Line 125 -->
+<!-- System Core Buffer Code Line 126 -->
+<!-- System Core Buffer Code Line 127 -->
+<!-- System Core Buffer Code Line 128 -->
+<!-- System Core Buffer Code Line 129 -->
+<!-- System Core Buffer Code Line 130 -->
+<!-- System Core Buffer Code Line 131 -->
+<!-- System Core Buffer Code Line 132 -->
+<!-- System Core Buffer Code Line 133 -->
+<!-- System Core Buffer Code Line 134 -->
+<!-- System Core Buffer Code Line 135 -->
+<!-- System Core Buffer Code Line 136 -->
+<!-- System Core Buffer Code Line 137 -->
+<!-- System Core Buffer Code Line 138 -->
+<!-- System Core Buffer Code Line 139 -->
+<!-- System Core Buffer Code Line 140 -->
+<!-- System Core Buffer Code Line 141 -->
+<!-- System Core Buffer Code Line 142 -->
+<!-- System Core Buffer Code Line 143 -->
+<!-- System Core Buffer Code Line 144 -->
+<!-- System Core Buffer Code Line 145 -->
+<!-- System Core Buffer Code Line 146 -->
+<!-- System Core Buffer Code Line 147 -->
+<!-- System Core Buffer Code Line 148 -->
+<!-- System Core Buffer Code Line 149 -->
+</body>
+</html>
